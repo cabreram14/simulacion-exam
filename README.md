@@ -419,3 +419,274 @@ La solución fue exitosa porque se hizo coincidir:
 | Puerto publicado en el host | 8080 |
 
 El problema inicial se debía a una configuración incorrecta de puertos. Después de corregir el Dockerfile, reconstruir la imagen y crear un nuevo contenedor, la aplicación quedó accesible desde la máquina anfitriona.
+
+--- 
+# Reto 2 - Kubernetes: Pods listos, Service sin tráfico
+
+# Preparación del entorno
+
+## 1. Ubicarse en la carpeta del proyecto
+
+```powershell
+cd "C:\Users\Sebas\Downloads\app-ejemplo-evaluacion\app-ejemplo-evaluacion"
+```
+
+Verificar la ubicación actual:
+
+```powershell
+pwd
+```
+
+---
+
+## 2. Verificar que Minikube esté ejecutándose
+
+```powershell
+minikube status
+```
+
+Resultado esperado:
+
+```text
+host: Running
+kubelet: Running
+apiserver: Running
+```
+
+---
+
+## 3. Verificar la conexión con Kubernetes
+
+```powershell
+kubectl get nodes
+```
+
+Resultado esperado:
+
+```text
+NAME       STATUS   ROLES           AGE   VERSION
+minikube   Ready    control-plane   ...
+```
+
+Esto confirma que el clúster está disponible para recibir recursos.
+
+---
+
+## 4. Verificar la imagen Docker
+
+La aplicación construida en el Reto 1 debe existir localmente.
+
+```powershell
+docker images
+```
+
+Resultado esperado:
+
+```text
+simulacion-reto-1    corregido
+```
+
+---
+
+## 5. Etiquetar la imagen
+
+El manifiesto utilizará la siguiente imagen:
+
+```text
+app-ejemplo-evaluacion:latest
+```
+
+Por ello se crea una nueva etiqueta:
+
+```powershell
+docker tag simulacion-reto-1:corregido app-ejemplo-evaluacion:latest
+```
+
+Verificar:
+
+```powershell
+docker images
+```
+
+---
+
+## 6. Cargar la imagen en Minikube
+
+```powershell
+minikube image load app-ejemplo-evaluacion:latest
+```
+
+Verificar:
+
+```powershell
+minikube image ls | Select-String "app-ejemplo-evaluacion"
+```
+
+La imagen debe aparecer dentro del entorno de Minikube.
+
+---
+
+# Creación del manifiesto
+
+## Crear el archivo
+
+```powershell
+New-Item kubernetes-reto2.yaml
+```
+
+Abrir en Visual Studio Code:
+
+```powershell
+code kubernetes-reto2.yaml
+```
+
+---
+
+## Contenido del manifiesto inicial
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: app-ejemplo-evaluacion:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+spec:
+  selector:
+    app: webapp
+  ports:
+    - port: 80
+      targetPort: 8080
+```
+
+> **Importante:** El separador `---` es obligatorio para definir más de un recurso dentro del mismo archivo YAML.
+
+---
+
+# Validación del manifiesto
+
+Antes de aplicarlo, validar la sintaxis:
+
+```powershell
+kubectl apply --dry-run=client -f kubernetes-reto2.yaml
+```
+
+Resultado esperado:
+
+```text
+deployment.apps/web-deployment created (dry run)
+service/web-service configured (dry run)
+```
+
+---
+
+# Aplicación del manifiesto
+
+```powershell
+kubectl apply -f kubernetes-reto2.yaml
+```
+
+Resultado esperado:
+
+```text
+deployment.apps/web-deployment created
+service/web-service created
+```
+
+---
+
+# Evidencia 1
+
+Aplicación correcta del manifiesto inicial.
+
+**Captura requerida:**
+
+- `kubectl apply -f kubernetes-reto2.yaml`
+
+---
+
+# Evidencia 2
+
+Verificar los Pods creados.
+
+```powershell
+kubectl get pods
+```
+
+o
+
+```powershell
+kubectl get pods -l app=web
+```
+
+Resultado esperado:
+
+```text
+READY   STATUS
+1/1     Running
+1/1     Running
+```
+
+En esta etapa los Pods deben encontrarse en estado **Running**.
+
+**Captura requerida:**
+
+- `kubectl get pods`
+
+---
+
+# Evidencia 3
+
+Verificar el Service.
+
+```powershell
+kubectl get svc
+```
+
+Consultar los Endpoints:
+
+```powershell
+kubectl get endpoints web-service
+```
+
+o
+
+```powershell
+kubectl describe service web-service
+```
+
+En este punto el Service no tendrá Endpoints válidos debido a que busca Pods con la etiqueta:
+
+```yaml
+app: webapp
+```
+
+mientras que los Pods poseen:
+
+```yaml
+app: web
+```
+
+Este será el diagnóstico del problema.
+
+...
