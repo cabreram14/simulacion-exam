@@ -139,7 +139,7 @@ Con esta verificación se garantiza que cualquier problema encontrado posteriorm
 ### Comando ejecutado
 
 ```powershell
-docker build -t simulacion-reto-1 .
+docker build -t <NOMBRE DE LA IMAGEN> .
 ```
 
 ### Explicación
@@ -157,7 +157,7 @@ Durante el proceso Docker ejecuta las instrucciones del Dockerfile (`FROM`, `WOR
 La construcción debe finalizar correctamente y registrar la imagen con el nombre:
 
 ```text
-simulacion-reto-1:latest
+NOMBRE DE LA IMAGEN:latest
 ```
 ---
 
@@ -166,7 +166,7 @@ simulacion-reto-1:latest
 ### Comando para crear el contenedor
 
 ```powershell
-docker run -d --name reto1-container -p 3000:3000 simulacion-reto-1
+docker run -d --name <NOMBRE CONTENEDOR> -p 3000:3000 <NOMBRE IMAGEN>
 ```
 
 ### Explicación
@@ -229,18 +229,13 @@ o cualquier otro error indicando que no fue posible establecer la conexión.'
 
 # Evidencia 4 - Diagnóstico e identificación de la causa
 
-## Objetivo
-
-Identificar la causa del problema antes de realizar cualquier modificación al proyecto.
-
----
 
 ## Revisión de los registros
 
 Comando utilizado:
 
 ```powershell
-docker logs reto1-container
+docker logs <NOMBRE CONTENEDOR>
 ```
 
 ## Revisión del servidor
@@ -347,8 +342,80 @@ El contenedor anterior debe eliminarse porque los cambios realizados en el Docke
 ## Reconstrucción de la imagen
 
 ```powershell
-docker build -t <NOMBRE DEL CONTENEDOR> .
+docker build -t <NOMBRE DE LA IMAGEN> .
 ```
 
 Se utilizó la etiqueta `corregido` para diferenciar la nueva imagen de la versión inicial defectuosa.
 
+--- 
+
+# Evidencia 6 - Validación de la solución
+
+## Creación del contenedor corregido
+
+```powershell
+docker run -d --name NOMBRE DEL CONTENEDOR -p 8080:8080 NOMBRE DE LA IAMGEN
+```
+
+### Explicación
+
+- `docker run`: crea e inicia un nuevo contenedor.
+- `-d`: ejecuta el contenedor en segundo plano.
+- `--name reto1-container-corregido`: asigna un nombre al nuevo contenedor.
+- `-p 8080:8080`: conecta el puerto 8080 del host con el puerto 8080 del contenedor.
+- `simulacion-reto-1:corregido`: utiliza la imagen reconstruida después de corregir el Dockerfile.
+
+La publicación de puertos sigue la estructura:
+
+```text
+-p PUERTO_HOST:PUERTO_CONTENEDOR
+```
+
+## Verificación del contenedor
+
+```powershell
+docker ps
+```
+
+El contenedor debe aparecer en estado `Up` y mostrar el siguiente mapeo:
+
+```text
+0.0.0.0:8080->8080/tcp
+```
+
+## Revisión de registros
+
+```powershell
+docker logs NOMBRE CONTENEDOR
+```
+
+Los registros confirman que la aplicación inició correctamente y escucha en el puerto `8080`.
+
+## Prueba de acceso
+
+```powershell
+curl.exe http://localhost:8080/
+```
+
+También se puede acceder desde el navegador mediante:
+
+```text
+http://localhost:8080
+```
+
+## Resultado
+
+La aplicación responde correctamente con un contenido JSON que incluye el mensaje, el nombre y la versión de la aplicación.
+
+## Conclusión
+
+La solución fue exitosa porque se hizo coincidir:
+
+| Elemento | Puerto |
+|---|---:|
+| Aplicación | 8080 |
+| Dockerfile | 8080 |
+| Puerto interno del contenedor | 8080 |
+| Puerto publicado en el host | 8080 |
+
+El problema inicial se debía a una configuración incorrecta de puertos. Después de corregir el Dockerfile, reconstruir la imagen y crear un nuevo contenedor, la aplicación quedó accesible desde la máquina anfitriona.
