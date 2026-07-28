@@ -227,3 +227,128 @@ o cualquier otro error indicando que no fue posible establecer la conexión.'
 
 ---
 
+# Evidencia 4 - Diagnóstico e identificación de la causa
+
+## Objetivo
+
+Identificar la causa del problema antes de realizar cualquier modificación al proyecto.
+
+---
+
+## Revisión de los registros
+
+Comando utilizado:
+
+```powershell
+docker logs reto1-container
+```
+
+## Revisión del servidor
+
+Archivo revisado:
+
+```text
+server.js
+```
+
+Puerto identificado:
+
+```javascript
+const PORT = 8080;
+```
+
+
+## Revisión del Dockerfile
+
+Archivo revisado:
+
+```text
+Dockerfile
+```
+
+Puerto expuesto:
+
+```dockerfile
+EXPOSE 3000
+```
+
+## Análisis
+
+Se comparó la configuración del servidor con la configuración del contenedor.
+
+| Elemento | Puerto |
+|----------|--------|
+| Aplicación (server.js) | 8080 |
+| Dockerfile (EXPOSE) | 3000 |
+| Publicación del contenedor | 3000 |
+
+La aplicación escucha en un puerto diferente al que Docker expone y publica, lo que impide acceder al servicio desde la máquina anfitriona.
+
+
+## Conclusión
+
+Se identificó una inconsistencia en la configuración de puertos entre la aplicación y el Dockerfile. Esta diferencia provoca que las solicitudes enviadas al puerto publicado por Docker no lleguen al servicio que se ejecuta dentro del contenedor.
+
+---
+
+# Evidencia 5 - Corrección del Dockerfile
+
+## Configuración inicial incorrecta
+
+El Dockerfile declaraba:
+
+```dockerfile
+EXPOSE 3000
+```
+
+Sin embargo, la aplicación escucha internamente en el puerto `8080`.
+
+## Corrección aplicada
+
+Se modificó el Dockerfile para declarar el puerto correcto:
+
+```dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 8080
+
+CMD ["node", "server.js"]
+```
+
+## Explicación
+
+La instrucción `EXPOSE 8080` documenta que la aplicación utiliza el puerto 8080 dentro del contenedor.
+
+`EXPOSE` no publica el puerto en la máquina anfitriona. La publicación se realiza al crear el contenedor mediante la opción `-p`.
+
+## Eliminación del contenedor anterior
+
+```powershell
+docker stop <NOMBRE DEL CONTENEDO>
+docker rm <NOMBRE DEL CONTENEDO>
+```
+
+También puede utilizarse:
+
+```powershell
+docker rm -f <NOMBRE DEL CONTENEDO>
+```
+
+El contenedor anterior debe eliminarse porque los cambios realizados en el Dockerfile no modifican contenedores existentes.
+
+## Reconstrucción de la imagen
+
+```powershell
+docker build -t <NOMBRE DEL CONTENEDOR> .
+```
+
+Se utilizó la etiqueta `corregido` para diferenciar la nueva imagen de la versión inicial defectuosa.
+
