@@ -1428,3 +1428,190 @@ deploy omitido
 ```
 
 Este comportamiento evita publicar o desplegar una versión cuyo código no ha superado las pruebas automatizadas.
+
+--- 
+
+## Evidencia 6 - Pruebas aprobadas y despliegue ejecutado
+
+### Restauración de la prueba
+
+Se devolvió la expectativa de la prueba a su valor correcto:
+
+```javascript
+assert.equal(response.statusCode, 200);
+```
+
+### Validación local
+
+Se ejecutó:
+
+```powershell
+npm test
+```
+
+El resultado fue:
+
+```text
+tests 2
+pass 2
+fail 0
+```
+
+Esto confirmó que el código superaba nuevamente todas las pruebas.
+
+### Registro del cambio
+
+```powershell
+git add .
+git commit -m "Reto 3 - Restaurar pruebas y validar pipeline corregido"
+git push
+```
+
+### Resultado final del pipeline
+
+GitHub Actions ejecutó primero el job `build-test`.
+
+Como las pruebas terminaron exitosamente, se permitió la ejecución del job `deploy`:
+
+```text
+build-test ✅
+     ↓
+deploy ✅
+```
+
+Los pasos del despliegue fueron ejecutados correctamente:
+
+```text
+Simular construcción de imagen
+Simular publicación de imagen
+Simular despliegue
+```
+
+### Conclusión
+
+La corrección mediante:
+
+```yaml
+needs: build-test
+```
+
+garantiza que el despliegue solo se ejecute cuando la instalación y las pruebas terminan exitosamente.
+
+El comportamiento final cumple el objetivo del reto:
+
+- Con pruebas fallidas, el despliegue es omitido.
+- Con pruebas aprobadas, el despliegue se ejecuta.
+- El orden entre las etapas queda explícitamente definido.
+
+### Evidencias requeridas
+
+- Captura de `npm test` con todas las pruebas aprobadas.
+- Captura de GitHub Actions con `build-test` exitoso.
+- Captura del job `deploy` ejecutado después de `build-test`.
+
+---
+
+# Evidencia 1 - Estado inicial del Deployment
+
+## Verificación del Deployment
+
+```powershell
+kubectl get deployment
+```
+
+Posteriormente se consultó la información detallada:
+
+```powershell
+kubectl describe deployment web-deployment
+```
+
+## Verificación de Pods
+
+```powershell
+kubectl get pods -o wide
+```
+
+## Información obtenida
+
+Se verificó:
+
+- Número de réplicas.
+- Pods disponibles.
+- Estado del Deployment.
+- Estrategia de actualización configurada.
+
+## Evidencia requerida
+
+Captura de:
+
+- `kubectl get deployment`
+- `kubectl describe deployment`
+- `kubectl get pods`
+
+---
+
+# Evidencia 2 - Escalamiento del Deployment
+
+
+## Escalamiento
+
+```powershell
+kubectl scale deployment web-deployment --replicas=5
+```
+
+## Verificación
+
+```powershell
+kubectl get deployment
+
+kubectl get pods
+```
+
+## Explicación
+
+El Deployment incrementó el número de réplicas de la aplicación.
+
+Kubernetes creó automáticamente nuevos Pods para distribuir la carga de trabajo.
+
+## Evidencia requerida
+
+Captura de:
+
+- `kubectl scale`
+- `kubectl get deployment`
+- `kubectl get pods`
+
+---
+
+# Evidencia 3 - Estrategia de despliegue
+
+## Configuración aplicada
+
+```yaml
+spec:
+  replicas: 5
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+```
+
+## Aplicación
+
+```powershell
+kubectl apply -f kubernetes-reto2.yaml
+```
+
+## Verificación
+
+```powershell
+kubectl describe deployment web-deployment
+```
+
+La estrategia Rolling Update permite reemplazar gradualmente los Pods antiguos por nuevos, manteniendo la disponibilidad del servicio.
+
+## Evidencia requerida
+
+Captura de `kubectl describe deployment web-deployment` mostrando la estrategia configurada.
