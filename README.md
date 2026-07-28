@@ -573,7 +573,7 @@ metadata:
   name: web-service
 spec:
   selector:
-    app: webapp
+    app: web
   ports:
     - port: 80
       targetPort: 8080
@@ -689,4 +689,175 @@ app: web
 
 Este será el diagnóstico del problema.
 
-...
+---
+
+# Evidencia 4 - Corrección del selector del Service
+
+## Configuración incorrecta
+
+Los Pods fueron creados con la etiqueta:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+spec:
+  selector:
+    app: webapp
+  ports:
+    - port: 80
+      targetPort: 8080
+```
+
+Sin embargo, el Service buscaba Pods con:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+spec:
+  selector:
+    app: web
+    # app: webapp
+  ports:
+    - port: 80
+      targetPort: 8080
+```
+
+Debido a esta diferencia, el Service no podía asociarse con los Pods y no tenía endpoints disponibles.
+
+## Corrección aplicada
+
+Se modificó el selector del Service:
+
+```yaml
+spec:
+  selector:
+    app: web
+```
+
+Ahora el selector coincide con la etiqueta de los Pods.
+
+## Validación del manifiesto
+
+```powershell
+kubectl apply --dry-run=client -f .\kubernetes-reto2.yaml
+```
+
+## Aplicación de la corrección
+
+```powershell
+kubectl apply -f .\kubernetes-reto2.yaml
+```
+
+Resultado esperado:
+
+```text
+deployment.apps/web-deployment unchanged
+service/web-service configured
+```
+---
+
+# Evidencia 5 - Service con endpoints válidos
+
+
+## Comando ejecutado
+
+```powershell
+kubectl get endpoints web-service
+```
+
+También se utilizó:
+
+```powershell
+kubectl describe service web-service
+```
+
+## Resultado esperado
+
+El Service debe mostrar las direcciones IP de los dos Pods en el puerto 8080:
+
+```text
+web-service   10.244.x.x:8080,10.244.x.x:8080
+```
+
+## Explicación
+
+Kubernetes compara el selector del Service con las etiquetas de los Pods.
+
+Después de corregir el selector a:
+
+```yaml
+app: web
+```
+
+el Service encontró los Pods que tienen la misma etiqueta y creó los endpoints correspondientes.
+
+## Evidencia
+
+Captura de:
+
+```powershell
+kubectl get endpoints web-service
+```
+
+mostrando dos endpoints válidos.
+
+--- 
+
+# Evidencia 6 - Petición exitosa mediante el Service
+
+## Creación del acceso temporal
+
+```powershell
+kubectl port-forward service/web-service 8081:80
+```
+
+### Explicación
+
+Este comando conecta temporalmente:
+
+```text
+Puerto 8081 del equipo → Puerto 80 del Service
+```
+
+El Service recibe la solicitud en el puerto 80 y la envía al puerto 8080 de uno de los Pods mediante `targetPort`.
+
+## Prueba desde otra terminal
+
+```powershell
+curl.exe http://localhost:8081/
+```
+
+También puede utilizarse el navegador:
+
+```text
+http://localhost:8081
+```
+
+## Resultado esperado
+
+La aplicación debe responder con un contenido JSON que incluya su mensaje, nombre y versión.
+
+## Flujo de comunicación
+
+```text
+Cliente
+  ↓ localhost:8081
+Port-forward
+  ↓
+Service web-service:80
+  ↓
+Pods:8080
+```
+
+## Conclusión
+
+La aplicación respondió correctamente mediante el Service de Kubernetes. Esto confirma que:
+
+- Los Pods están en ejecución.
+- El selector del Service coincide con las etiquetas de los Pods.
+- El Service tiene endpoints válidos.
+- El puerto 80 del Service dirige el tráfico al puerto 8080 de los contenedores.
