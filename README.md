@@ -1202,3 +1202,104 @@ deploy
 ```
 
 Esta ejecución representa el estado inicial del pipeline antes de provocar intencionalmente una prueba fallida.
+
+--- 
+## Evidencia 2 - Prueba fallida provocada intencionalmente
+
+
+### Modificación realizada
+
+En el archivo de pruebas se modificó intencionalmente una validación.
+
+La prueba originalmente esperaba que el endpoint respondiera con el código HTTP:
+
+```javascript
+assert.equal(response.statusCode, 200);
+```
+
+Se cambió temporalmente por:
+
+```javascript
+assert.equal(response.statusCode, 500);
+```
+
+La aplicación continuó respondiendo correctamente con el código `200`, pero la prueba esperaba incorrectamente un código `500`.
+
+### Ejecución local
+
+Se ejecutó:
+
+```powershell
+npm test
+```
+
+El resultado mostró una prueba fallida:
+
+```text
+tests 2
+pass 1
+fail 1
+```
+
+La falla fue intencional y controlada. No se modificó el código funcional de la aplicación.
+
+### Registro en Git
+
+```powershell
+git status
+git add .
+git commit -m "Reto 3 - Provocar falla intencional en las pruebas"
+git push
+```
+
+El `push` activó automáticamente el workflow de GitHub Actions.
+
+### Evidencia requerida
+
+Captura de la terminal mostrando el resultado fallido de `npm test`.
+
+---
+
+## Evidencia 3 - Comportamiento defectuoso del pipeline inicial
+
+
+### Resultado observado
+
+Después de subir la prueba defectuosa, GitHub Actions ejecutó los dos jobs del pipeline:
+
+```text
+build-test
+deploy
+```
+
+El job `build-test` falló durante el comando:
+
+```powershell
+npm test
+```
+
+Sin embargo, el job `deploy` se ejecutó exitosamente.
+
+La ejecución presentó el siguiente estado:
+
+```text
+build-test ❌
+deploy     ✅
+```
+
+### Causa del problema
+
+El job `deploy` no tenía una dependencia explícita respecto al job `build-test`.
+
+La estructura inicial era:
+
+```text
+Push
+ ├── build-test
+ └── deploy
+```
+
+Ambos jobs podían ejecutarse de manera independiente y en paralelo.
+
+Por esta razón, el fallo de las pruebas no impedía que se ejecutara el despliegue.
+
