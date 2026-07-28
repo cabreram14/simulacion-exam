@@ -861,3 +861,344 @@ La aplicación respondió correctamente mediante el Service de Kubernetes. Esto 
 - El selector del Service coincide con las etiquetas de los Pods.
 - El Service tiene endpoints válidos.
 - El puerto 80 del Service dirige el tráfico al puerto 8080 de los contenedores.
+
+--- 
+# Reto 3 - CI/CD: despliegue ejecutado aunque las pruebas fallen
+
+## Objetivo
+
+Asegurar que el despliegue solo pueda ejecutarse cuando el proceso de instalación, construcción y pruebas termine exitosamente.
+
+El pipeline inicial presenta un defecto: el trabajo de despliegue no depende del trabajo que ejecuta las pruebas. Por lo tanto, ambos trabajos pueden ejecutarse independientemente.
+
+---
+
+## 1. Creación de la carpeta de GitHub Actions
+
+Desde la raíz del proyecto se creó la carpeta utilizada por GitHub para almacenar los workflows:
+
+```powershell
+New-Item -ItemType Directory -Force .github\workflows
+```
+
+Se verificó su creación mediante:
+
+```powershell
+Get-ChildItem .github\workflows
+```
+
+GitHub reconoce automáticamente los archivos YAML que se encuentran dentro de:
+
+```text
+.github/workflows/
+```
+
+---
+
+## 2. Creación del archivo del pipeline
+
+Se creó el archivo:
+
+```powershell
+New-Item -ItemType File -Force .github\workflows\ci-cd.yml
+```
+
+Posteriormente se abrió con Visual Studio Code:
+
+```powershell
+code .github\workflows\ci-cd.yml
+```
+
+---
+
+## 3. Pipeline inicial
+
+Se agregó el siguiente workflow:
+
+```yaml
+name: ci-cd
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Simular construcción de imagen
+        run: echo "Construyendo imagen app:${{ github.sha }}"
+
+      - name: Simular publicación de imagen
+        run: echo "Publicando imagen registry/app:${{ github.sha }}"
+
+      - name: Simular despliegue
+        run: echo "Desplegando registry/app:${{ github.sha }} en Kubernetes"
+```
+
+---
+
+## 4. Explicación del pipeline inicial
+
+El workflow se ejecuta cuando se realiza un `push` sobre la rama:
+
+```yaml
+branches:
+  - main
+```
+
+El job `build-test` realiza las siguientes actividades:
+
+1. Descarga el código del repositorio.
+2. Configura Node.js.
+3. Instala las dependencias con `npm ci`.
+4. Ejecuta las pruebas mediante `npm test`.
+
+El job `deploy` simula:
+
+1. La construcción de la imagen.
+2. La publicación de la imagen.
+3. El despliegue en Kubernetes.
+
+En la versión inicial no existe una dependencia entre ambos jobs. Por esta razón, GitHub Actions puede ejecutar `build-test` y `deploy` de manera independiente.
+
+La estructura inicial es:
+
+```text
+Push
+ ├── build-test
+ └── deploy
+```
+
+Este comportamiento será utilizado para demostrar el defecto solicitado en el reto.
+
+---
+
+## 5. Registro del pipeline en Git
+
+Se verificaron los cambios:
+
+```powershell
+git status
+```
+
+Se agregó el archivo del workflow:
+
+```powershell
+git add .github/workflows/ci-cd.yml
+```
+
+Se creó el commit:
+
+```powershell
+git commit -m "Reto 3 - Agregar pipeline CI CD inicial defectuoso"
+```
+
+Finalmente, se publicó el cambio en GitHub:
+
+```powershell
+git push
+```
+
+---
+# Reto 3 - CI/CD: despliegue ejecutado aunque las pruebas fallen
+
+## Objetivo
+
+Asegurar que el despliegue solo pueda ejecutarse cuando el proceso de instalación, construcción y pruebas termine exitosamente.
+
+El pipeline inicial presenta un defecto: el trabajo de despliegue no depende del trabajo que ejecuta las pruebas. Por lo tanto, ambos trabajos pueden ejecutarse independientemente.
+
+---
+
+## 1. Creación de la carpeta de GitHub Actions
+
+Desde la raíz del proyecto se creó la carpeta utilizada por GitHub para almacenar los workflows:
+
+```powershell
+New-Item -ItemType Directory -Force .github\workflows
+```
+
+Se verificó su creación mediante:
+
+```powershell
+Get-ChildItem .github\workflows
+```
+
+GitHub reconoce automáticamente los archivos YAML que se encuentran dentro de:
+
+```text
+.github/workflows/
+```
+
+---
+
+## 2. Creación del archivo del pipeline
+
+Se creó el archivo:
+
+```powershell
+New-Item -ItemType File -Force .github\workflows\ci-cd.yml
+```
+
+Posteriormente se abrió con Visual Studio Code:
+
+```powershell
+code .github\workflows\ci-cd.yml
+```
+
+---
+
+## 3. Pipeline inicial
+
+Se agregó el siguiente workflow:
+
+```yaml
+name: ci-cd
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Simular construcción de imagen
+        run: echo "Construyendo imagen app:${{ github.sha }}"
+
+      - name: Simular publicación de imagen
+        run: echo "Publicando imagen registry/app:${{ github.sha }}"
+
+      - name: Simular despliegue
+        run: echo "Desplegando registry/app:${{ github.sha }} en Kubernetes"
+```
+
+---
+
+## 4. Explicación del pipeline inicial
+
+El workflow se ejecuta cuando se realiza un `push` sobre la rama:
+
+```yaml
+branches:
+  - main
+```
+
+El job `build-test` realiza las siguientes actividades:
+
+1. Descarga el código del repositorio.
+2. Configura Node.js.
+3. Instala las dependencias con `npm ci`.
+4. Ejecuta las pruebas mediante `npm test`.
+
+El job `deploy` simula:
+
+1. La construcción de la imagen.
+2. La publicación de la imagen.
+3. El despliegue en Kubernetes.
+
+En la versión inicial no existe una dependencia entre ambos jobs. Por esta razón, GitHub Actions puede ejecutar `build-test` y `deploy` de manera independiente.
+
+La estructura inicial es:
+
+```text
+Push
+ ├── build-test
+ └── deploy
+```
+
+Este comportamiento será utilizado para demostrar el defecto solicitado en el reto.
+
+---
+
+## 5. Registro del pipeline en Git
+
+Se verificaron los cambios:
+
+```powershell
+git status
+```
+
+Se agregó el archivo del workflow:
+
+```powershell
+git add .github/workflows/ci-cd.yml
+```
+
+Se creó el commit:
+
+```powershell
+git commit -m "Reto 3 - Agregar pipeline CI CD inicial defectuoso"
+```
+
+Finalmente, se publicó el cambio en GitHub:
+
+```powershell
+git push
+```
+
+---
+
+## Evidencia 1 - Pipeline inicial
+
+Después del `push`, GitHub Actions ejecutó automáticamente el workflow denominado:
+
+```text
+ci-cd
+```
+
+En la primera ejecución se observaron los dos trabajos:
+
+```text
+build-test
+deploy
+```
+
+Esta ejecución representa el estado inicial del pipeline antes de provocar intencionalmente una prueba fallida.
