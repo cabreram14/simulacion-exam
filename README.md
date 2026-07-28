@@ -1303,3 +1303,128 @@ Ambos jobs podían ejecutarse de manera independiente y en paralelo.
 
 Por esta razón, el fallo de las pruebas no impedía que se ejecutara el despliegue.
 
+--- 
+
+## Evidencia 4 - Workflow corregido
+
+
+
+### Problema identificado
+
+En el workflow inicial, los trabajos `build-test` y `deploy` no tenían una dependencia explícita:
+
+```text
+Push
+ ├── build-test
+ └── deploy
+```
+
+Por esta razón, ambos podían ejecutarse de manera independiente.
+
+### Corrección aplicada
+
+Se agregó la propiedad `needs` al job `deploy`:
+
+```yaml
+deploy:
+  needs: build-test
+  runs-on: ubuntu-latest
+```
+
+La nueva estructura del pipeline es:
+
+```text
+Push
+  ↓
+build-test
+  ↓
+deploy
+```
+
+La instrucción:
+
+```yaml
+needs: build-test
+```
+
+obliga al job `deploy` a esperar la finalización del job `build-test`.
+
+Si `build-test` falla, GitHub Actions no ejecutará el despliegue.
+
+### Verificación del cambio
+
+```powershell
+git diff
+```
+
+También se revisó el archivo completo mediante:
+
+```powershell
+Get-Content .github\workflows\ci-cd.yml
+```
+
+### Registro en Git
+
+```powershell
+git add .github/workflows/ci-cd.yml
+git commit -m "Reto 3 - Condicionar despliegue al resultado de las pruebas"
+git push
+```
+--- 
+
+## Evidencia 5 - Pruebas fallidas y despliegue bloqueado
+
+### Objetivo
+
+Comprobar que el despliegue no se ejecuta cuando las pruebas automatizadas fallan.
+
+### Condición utilizada
+
+La prueba continuaba modificada intencionalmente para esperar un código HTTP incorrecto:
+
+```javascript
+assert.equal(response.statusCode, 500);
+```
+
+Sin embargo, la aplicación respondía correctamente con:
+
+```text
+200
+```
+
+Esto provocó que el job `build-test` fallara durante:
+
+```powershell
+npm test
+```
+
+### Resultado del pipeline corregido
+
+Después de agregar:
+
+```yaml
+needs: build-test
+```
+
+el pipeline presentó el siguiente resultado:
+
+```text
+build-test ❌
+deploy     ⏭️ Skipped
+```
+
+### Interpretación
+
+El trabajo `deploy` reconoció que su dependencia `build-test` no terminó exitosamente.
+
+Por ello, GitHub Actions omitió completamente la etapa de despliegue.
+
+La estructura observada fue:
+
+```text
+build-test ❌
+     ↓
+deploy omitido
+```
+
+Este comportamiento evita publicar o desplegar una versión cuyo código no ha superado las pruebas automatizadas.
