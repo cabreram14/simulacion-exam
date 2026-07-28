@@ -573,7 +573,7 @@ metadata:
   name: web-service
 spec:
   selector:
-    app: web
+    app: webapp
   ports:
     - port: 80
       targetPort: 8080
