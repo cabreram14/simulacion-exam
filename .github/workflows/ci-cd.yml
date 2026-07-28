@@ -1,0 +1,41 @@
+name: ci-cd
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Simular construcción de imagen
+        run: echo "Construyendo imagen app:${{ github.sha }}"
+
+      - name: Simular publicación de imagen
+        run: echo "Publicando imagen registry/app:${{ github.sha }}"
+
+      - name: Simular despliegue
+        run: echo "Desplegando registry/app:${{ github.sha }} en Kubernetes"
