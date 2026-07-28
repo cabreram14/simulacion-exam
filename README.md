@@ -1615,3 +1615,85 @@ La estrategia Rolling Update permite reemplazar gradualmente los Pods antiguos p
 ## Evidencia requerida
 
 Captura de `kubectl describe deployment web-deployment` mostrando la estrategia configurada.
+
+---
+
+# Evidencia 4 - Tráfico durante el despliegue
+
+## Generación de tráfico
+
+```powershell
+kubectl port-forward service/web-service 8081:80
+```
+
+En otra terminal:
+
+```powershell
+while ($true) {
+    curl.exe http://localhost:8081/
+    Start-Sleep -Seconds 1
+}
+```
+
+## Reinicio del Deployment
+
+```powershell
+kubectl rollout restart deployment web-deployment
+```
+
+## Monitoreo
+
+```powershell
+kubectl get pods -w
+```
+
+## Resultado esperado
+
+Durante el reinicio, Kubernetes reemplaza los Pods uno por uno, mientras la aplicación continúa respondiendo a las solicitudes.
+
+## Evidencia requerida
+
+Capturas del tráfico continuo y del reemplazo de Pods.
+
+---
+
+# Evidencia 5 - Disponibilidad del servicio
+
+
+## Verificación del despliegue
+
+```powershell
+kubectl rollout status deployment web-deployment
+```
+
+Resultado esperado:
+
+```text
+deployment "web-deployment" successfully rolled out
+```
+
+## Estado final
+
+```powershell
+kubectl get pods
+```
+
+Todos los Pods deben encontrarse en estado `Running`.
+
+## Prueba final
+
+```powershell
+curl.exe http://localhost:8081/
+```
+
+La aplicación respondió correctamente después del despliegue.
+
+## Conclusión
+
+Gracias a la estrategia Rolling Update, Kubernetes reemplazó los Pods gradualmente, manteniendo la disponibilidad del servicio durante todo el proceso.
+
+## Evidencia requerida
+
+- Captura de `kubectl rollout status`.
+- Captura de `kubectl get pods`.
+- Captura de la respuesta final de la aplicación.
